@@ -1,0 +1,91 @@
+pipeline {
+    agent any 
+  tools {
+      
+         jdk 'JDK_17'
+        maven 'MVN_3' // The name configured in Global Tool Configuration
+    }
+
+  
+      environment {
+        NEXUS_VERSION = "nexus3"
+        NEXUS_PROTOCOL = "http"
+        NEXUS_URL = "http://18.61.5.17:8081"
+        NEXUS_REPOSITORY = "maven-releases"
+        NEXUS_CREDENTIAL_ID = "NEXUS"
+        IMAGE_TAG = "v${BUILD_NUMBER}"
+     }
+
+ 
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/spring-projects/spring-petclinic.git'
+                   
+            }
+        }
+        stage('code compile') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+       
+          stage('testing') {
+            steps {
+                sh "mvn test"
+            }
+        }
+       
+
+         stage('Trivy scan') {
+            steps {
+               sh "trivy fs . --format table -o fs-report.html "
+               archiveArtifacts artifacts: 'fs-report.html', fingerprint: true
+            }
+        }
+        
+        stage('SonarQube Code Analysis') {
+            steps {
+                // Run SonarQube analysis for Python
+                script {
+                    def scannerHome = tool name: 'SONAR', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    withSonarQubeEnv('MYSONAR') {
+                         sh 'mvn test sonar:sonar'
+                    }
+                }
+            }  
+        }
+          
+    stage('Build') {
+            steps {
+                sh "mvn package"
+            }
+        }
+    
+
+  stage('Upload Artifact'){
+      steps{
+         nexusArtifactUploader(
+          nexusVersion: 'nexus3',
+          protocol: 'http',
+          nexusUrl: '18.61.5.17:8081',
+          groupId: 'Devopa',
+          version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
+          repository: 'maven-releases',
+         credentialsId: 'Nexus',
+            artifacts: [
+             [artifactId: 'MAVENFILE',
+             classifier: '',
+             file: 'target/*.jar',
+             type: 'jar']
+          ]
+       )
+    }
+     } 
+        
+
+    }
+}
+
+
+
