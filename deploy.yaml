@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata :
+   name : My_deploy
+spec : 
+   minReadySeconds : 5
+   replicas : 2
+   selector : 
+      matchLabels :
+        app: nginx
+   template : 
+     metadata : 
+       name : MY_pod
+     spec :
+       containers : 
+         - name : MY_Nginx
+           image : 
+           Ports :
+            - containerPort : 8080
+
+
+---
+apiVersion: v1
+kind: Service
+metadata :
+  name :
+   labels :
+     my_svc
+   spec : 
+   type : LoadBalancer
+   ports :
+   - protocol: "TCP"
+     port : 8080
+     targetPort : 8080
+  selector :
+     app: nginx
+
+
+              
